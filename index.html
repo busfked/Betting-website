@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Online Number Game Dashboard</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #121212; color: #ffffff; margin: 0; padding: 15px; text-align: center; }
+        .container { max-width: 500px; margin: auto; background: #1e1e1e; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        h1 { color: #00ff88; margin-bottom: 5px; }
+        .balance-card { background: linear-gradient(135deg, #11998e, #38ef7d); padding: 15px; border-radius: 10px; margin: 15px 0; font-size: 18px; font-weight: bold; }
+        .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 20px 0; max-height: 250px; overflow-y: auto; padding: 5px; background: #111; border-radius: 8px; }
+        .num-btn { background: #333; color: white; border: none; padding: 12px 0; font-size: 16px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .num-btn.selected { background: #00ff88; color: black; }
+        input, button.action-btn { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; box-sizing: border-box; font-size: 16px; }
+        input { background: #2a2a2a; color: white; border: 1px solid #444; }
+        button.action-btn { background: #00ff88; color: black; font-weight: bold; cursor: pointer; transition: 0.2s; }
+        button.action-btn:hover { background: #00cc6e; }
+        .withdraw-btn { background: #ff3b30 !important; color: white !important; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🔢 Virtual Draw Arena</h1>
+    <p style="color: #aaa; font-size: 14px; margin-top:0;">Max Bet: 300 Birr | Min Bet: 5 Birr</p>
+
+    <!-- PLAYER DASHBOARD SECTION -->
+    <div class="balance-card">
+        Dashboard Wallet: <span id="wallet-balance">0</span> ETB
+        <div style="font-size: 12px; margin-top: 5px; color: #e0e0e0;">
+            Wins: <span id="stats-won">0</span> ETB | Losses: <span id="stats-lost">0</span> ETB
+        </div>
+    </div>
+
+    <!-- MAIN INTERACTIVE FORM -->
+    <input type="text" id="player-phone" placeholder="Enter Your Phone Number (09...)" required>
+    <button class="action-btn" onclick="loadDashboard()">Load My Dashboard</button>
+    
+    <hr style="border-color: #333; margin: 20px 0;">
+
+    <h3>Pick Your 3 Numbers:</h3>
+    <div class="grid" id="number-grid"></div>
+    <p id="selection-status" style="color:#00ff88; font-size:14px; font-weight:bold;"></p>
+
+    <input type="number" id="bet-amount" placeholder="Bet Amount (5 - 300 ETB)" min="5" max="300">
+    <input type="text" id="screenshot-url" placeholder="Paste Payment Receipt Image URL">
+    
+    <button class="action-btn" onclick="submitTicket()">Submit Ticket & Payment</button>
+    <button class="action-btn withdraw-btn" onclick="requestWithdrawal()">Request Cash Withdrawal</button>
+</div>
+
+<script>
+    // Replace this string with your exact Render live URL web service link!
+    const BACKEND_URL = "https://onrender.com"; 
+    
+    let selectedNumbers = [];
+
+    // Generate clickable number grid from 1 to 100
+    const grid = document.getElementById('number-grid');
+    for (let i = 1; i <= 100; i++) {
+        let btn = document.createElement('button');
+        btn.className = 'num-btn';
+        btn.innerText = i;
+        btn.onclick = () => toggleNumber(i, btn);
+        grid.appendChild(btn);
+    }
+
+    function toggleNumber(num, btn) {
+        if (selectedNumbers.includes(num)) {
+            selectedNumbers = selectedNumbers.filter(n => n !== num);
+            btn.classList.remove('selected');
+        } else {
+            if (selectedNumbers.length >= 3) {
+                alert("You can only choose exactly 3 numbers, bro!");
+                return;
+            }
+            selectedNumbers.push(num);
+            btn.classList.add('selected');
+        }
+        document.getElementById('selection-status').innerText = `Selected: ${selectedNumbers.join(', ')}`;
+    }
+
+    // Fetch account winnings, losses, and balance from backend
+    async function loadDashboard() {
+        const phone = document.getElementById('player-phone').value;
+        if (!phone) return alert("Please type your phone number first!");
+        
+        try {
+            const res = await fetch(`${BACKEND_URL}/api/dashboard/${phone}`);
+            const data = await res.json();
+            document.getElementById('wallet-balance').innerText = data.balance || 0;
+            document.getElementById('stats-won').innerText = data.total_won || 0;
+            document.getElementById('stats-lost').innerText = data.total_lost || 0;
+        } catch (err) {
+            alert("Waking up server... please wait 30 seconds and click load again!");
+        }
+    }
+
+    // Submit player ticket logs to Supabase via backend
+    async function submitTicket() {
+        const phone = document.getElementById('player-phone').value;
+        const bet = document.getElementById('bet-amount').value;
+        const screenshot = document.getElementById('screenshot-url').value;
+
+        if (!phone || selectedNumbers.length !== 3 || !bet || !screenshot) {
+            return alert("Fill out all sections completely (Phone, 3 Numbers, Bet, and Screenshot URL)!");
+        }
+
+        const response = await fetch(`${BACKEND_URL}/api/submit-bet`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                username: "Player_" + phone.substring(7),
+                phoneNumber: phone,
+                chosenNumbers: selectedNumbers,
+                betAmount: parseInt(bet),
+                screenshotUrl: screenshot
+            })
+        });
+        const result = await response.json();
+        alert(result.message || result.error);
+    }
+
+    // Request cash withdrawal alert notification for admin
+    async function requestWithdrawal() {
+        const phone = document.getElementById('player-phone').value;
+        const amount = prompt("Enter the exact amount you want to withdraw in Birr:");
+        if (!phone || !amount) return;
+
+        const response = await fetch(`${BACKEND_URL}/api/request-withdrawal`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phoneNumber: phone, amount: parseInt(amount) })
+        });
+        const result = await response.json();
+        alert(result.message || result.error);
+        loadDashboard(); // Refresh balance totals
+    }
+</script>
+</body>
+</html>
