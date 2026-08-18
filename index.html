@@ -35,7 +35,7 @@
     <input type="text" id="player-phone" placeholder="Enter Your Phone Number (09...)" required>
     <button class="action-btn" onclick="loadDashboard()">Load My Dashboard</button>
     
-    <!-- DEPOSIT SECTION (ONCE) -->
+    <!-- DEPOSIT SECTION -->
     <div class="deposit-section">
         <h4 style="margin: 0 0 10px 0; color: #00ff88;">💰 Deposit Balance to Wallet</h4>
         <input type="number" id="deposit-amount" placeholder="Amount to Deposit (ETB)">
@@ -57,11 +57,11 @@
 </div>
 
 <script>
-    // Replace with your exact live web service URL link from your Render service dashboard!
+    // Paste your exact unique Render web link between these quotes!
     const BACKEND_URL = "https://onrender.com"; 
     let selectedNumbers = [];
 
-    // Initialize number grid
+    // Initialize layout grid
     const grid = document.getElementById('number-grid');
     for (let i = 1; i <= 100; i++) {
         let btn = document.createElement('button');
@@ -118,7 +118,7 @@
         const bet = document.getElementById('bet-amount').value;
 
         if (!phone || selectedNumbers.length !== 3 || !bet) {
-            return alert("Select your account profile phone number, choose 3 numbers, and input your bet amount!");
+            return alert("Input your phone profile, select 3 numbers, and pick your bet amount!");
         }
 
         const response = await fetch(`${BACKEND_URL}/api/play-round`, {
@@ -132,7 +132,7 @@
         } else {
             alert(result.message);
             document.getElementById('wallet-balance').innerText = result.currentBalance;
-            loadDashboard(); // Refresh matching win/loss metrics panels
+            loadDashboard();
         }
     }
 
